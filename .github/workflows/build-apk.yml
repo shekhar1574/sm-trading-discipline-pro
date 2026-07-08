@@ -1,0 +1,52 @@
+name: Build Android APK
+
+# Runs automatically on every push to main, and can also be triggered
+# manually from the Actions tab ("Run workflow" button).
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java (required by Android Gradle build)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      # This repo ships lib/, pubspec.yaml, assets/ but not the native
+      # android/ folder (Flutter generates that locally). If android/
+      # is missing, scaffold it here so the workflow is self-sufficient.
+      - name: Scaffold native Android project if missing
+        run: |
+          if [ ! -d "android" ]; then
+            echo "No android/ folder found — generating one."
+            flutter create --org com.smtrading --project-name sm_trading_discipline_pro --platforms android .
+          fi
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release --split-per-abi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sm-trading-discipline-pro-apk
+          path: build/app/outputs/flutter-apk/*.apk
+          retention-days: 30
