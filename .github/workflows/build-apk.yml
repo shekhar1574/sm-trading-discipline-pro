@@ -32,10 +32,42 @@ jobs:
             flutter create --org com.smtrading --project-name sm_trading_discipline_pro --platforms android .
           fi
 
-      - name: Ensure compileSdk 35 in generated Android project
+      - name: Patch generated Android project (compileSdk 36 + desugaring)
         run: |
-          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 35/' android/app/build.gradle.kts 2>/dev/null || true
-          sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 35/' android/app/build.gradle 2>/dev/null || true
+          python3 << 'PYEOF'
+          import re
+
+          path = "android/app/build.gradle.kts"
+          with open(path) as f:
+              content = f.read()
+
+          content = re.sub(
+              r'compileSdk\s*=\s*flutter\.compileSdkVersion',
+              'compileSdk = 36',
+              content,
+          )
+          content = re.sub(
+              r'compileSdk\s*=\s*\d+',
+              'compileSdk = 36',
+              content,
+          )
+
+          if 'isCoreLibraryDesugaringEnabled' not in content:
+              content = re.sub(
+                  r'(compileOptions\s*\{)',
+                  r'\1\n        isCoreLibraryDesugaringEnabled = true',
+                  content,
+                  count=1,
+              )
+
+          content += '\n\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+
+          with open(path, "w") as f:
+              f.write(content)
+
+          print("Patched build.gradle.kts:")
+          print(content)
+          PYEOF
 
       - name: Install dependencies
         run: flutter pub get
