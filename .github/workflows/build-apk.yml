@@ -1,7 +1,5 @@
 name: Build Android APK
 
-# Runs automatically on every push to main, and can also be triggered
-# manually from the Actions tab ("Run workflow" button).
 on:
   push:
     branches: [ "main" ]
@@ -24,19 +22,20 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
           channel: 'stable'
           cache: true
 
-      # This repo ships lib/, pubspec.yaml, assets/ but not the native
-      # android/ folder (Flutter generates that locally). If android/
-      # is missing, scaffold it here so the workflow is self-sufficient.
       - name: Scaffold native Android project if missing
         run: |
           if [ ! -d "android" ]; then
             echo "No android/ folder found — generating one."
             flutter create --org com.smtrading --project-name sm_trading_discipline_pro --platforms android .
           fi
+
+      - name: Ensure compileSdk 35 in generated Android project
+        run: |
+          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 35/' android/app/build.gradle.kts 2>/dev/null || true
+          sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 35/' android/app/build.gradle 2>/dev/null || true
 
       - name: Install dependencies
         run: flutter pub get
