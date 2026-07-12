@@ -1,5 +1,7 @@
 name: Build Android APK
 
+# Runs automatically on every push to main, and can also be triggered
+# manually from the Actions tab ("Run workflow" button).
 on:
   push:
     branches: [ "main" ]
@@ -22,52 +24,19 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.24.0'
           channel: 'stable'
           cache: true
 
+      # This repo ships lib/, pubspec.yaml, assets/ but not the native
+      # android/ folder (Flutter generates that locally). If android/
+      # is missing, scaffold it here so the workflow is self-sufficient.
       - name: Scaffold native Android project if missing
         run: |
           if [ ! -d "android" ]; then
             echo "No android/ folder found — generating one."
             flutter create --org com.smtrading --project-name sm_trading_discipline_pro --platforms android .
           fi
-
-      - name: Patch generated Android project (compileSdk 36 + desugaring)
-        run: |
-          python3 << 'PYEOF'
-          import re
-
-          path = "android/app/build.gradle.kts"
-          with open(path) as f:
-              content = f.read()
-
-          content = re.sub(
-              r'compileSdk\s*=\s*flutter\.compileSdkVersion',
-              'compileSdk = 36',
-              content,
-          )
-          content = re.sub(
-              r'compileSdk\s*=\s*\d+',
-              'compileSdk = 36',
-              content,
-          )
-
-          if 'isCoreLibraryDesugaringEnabled' not in content:
-              content = re.sub(
-                  r'(compileOptions\s*\{)',
-                  r'\1\n        isCoreLibraryDesugaringEnabled = true',
-                  content,
-                  count=1,
-              )
-
-          content += '\n\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
-
-          with open(path, "w") as f:
-              f.write(content)
-
-          print("Patched build.gradle.kts:")
-          print(content)
-          PYEOF
 
       - name: Install dependencies
         run: flutter pub get
