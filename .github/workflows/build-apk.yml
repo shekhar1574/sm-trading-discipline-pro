@@ -26,7 +26,7 @@ jobs:
         with:
           flutter-version: '3.24.0'
           channel: 'stable'
-          cache: true
+          cache: false
 
       # This repo ships lib/, pubspec.yaml, assets/ but not the native
       # android/ folder (Flutter generates that locally). If android/
