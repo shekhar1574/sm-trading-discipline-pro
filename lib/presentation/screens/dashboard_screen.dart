@@ -7,6 +7,10 @@ import '../providers/dashboard_provider.dart';
 import '../widgets/discipline_gauge.dart';
 import '../widgets/stat_card.dart';
 import 'emotion_check_screen.dart';
+import 'analytics_screen.dart';
+import 'pnl_calendar_screen.dart';
+import 'strategies_screen.dart';
+import 'broker_connect_screen.dart';
 import 'settings_screen.dart';
 import 'trade_journal_screen.dart';
 
@@ -197,7 +201,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: _quickTile(context, Icons.insights_outlined, 'AI Analytics',
+                const AnalyticsScreen())),
+            const SizedBox(width: 10),
+            Expanded(child: _quickTile(context, Icons.calendar_month_outlined, 'P&L Calendar',
+                const PnlCalendarScreen())),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(child: _quickTile(context, Icons.rule_folder_outlined, 'Strategies',
+                const StrategiesScreen())),
+            const SizedBox(width: 10),
+            Expanded(child: _quickTile(context, Icons.link, 'Connect Broker',
+                const BrokerConnectScreen())),
+          ],
+        ),
       ],
+    );
+  }
+
+  Widget _quickTile(BuildContext context, IconData icon, String label, Widget screen) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 20, color: AppColors.primary),
+            const SizedBox(height: 6),
+            Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
     );
   }
 }

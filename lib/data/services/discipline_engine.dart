@@ -145,4 +145,66 @@ class DisciplineEngine {
       'avgPnl': avgPnl,
     };
   }
+
+  /// Realized P&L grouped by calendar day (yyyy-mm-dd -> total pnl),
+  /// used by the monthly P&L calendar screen.
+  Map<String, double> dailyPnlMap(List<TradeModel> trades) {
+    final map = <String, double>{};
+    for (final t in trades.where((t) => t.isClosed)) {
+      final key =
+          '${t.createdAt.year}-${t.createdAt.month.toString().padLeft(2, '0')}-${t.createdAt.day.toString().padLeft(2, '0')}';
+      map[key] = (map[key] ?? 0) + (t.pnl ?? 0);
+    }
+    return map;
+  }
+
+  /// Win rate / P&L broken down per market segment (Equity/F&O/Forex/Crypto).
+  Map<String, Map<String, dynamic>> summarizeBySegment(
+      List<TradeModel> trades) {
+    final result = <String, Map<String, dynamic>>{};
+    final segments = trades.map((t) => t.segment).toSet();
+    for (final segment in segments) {
+      final segTrades = trades.where((t) => t.segment == segment).toList();
+      result[segment] = summarize(segTrades);
+    }
+    return result;
+  }
+
+  /// Groups closed trades by hour-of-day to find the trader's best and
+  /// worst performing trading windows.
+  Map<int, double> pnlByHourOfDay(List<TradeModel> trades) {
+    final map = <int, double>{};
+    for (final t in trades.where((t) => t.isClosed)) {
+      final hour = t.createdAt.hour;
+      map[hour] = (map[hour] ?? 0) + (t.pnl ?? 0);
+    }
+    return map;
+  }
+
+  /// Tally of free-text "mistakes made" entries, lower-cased and trimmed,
+  /// to surface the most frequently repeated mistake.
+  Map<String, int> commonMistakes(List<TradeModel> trades) {
+    final tally = <String, int>{};
+    for (final t in trades) {
+      final mistake = t.mistakesMade?.trim();
+      if (mistake == null || mistake.isEmpty) continue;
+      final key = mistake.toLowerCase();
+      tally[key] = (tally[key] ?? 0) + 1;
+    }
+    return tally;
+  }
+
+  /// Win rate / average P&L broken down by the emotion declared before
+  /// each trade — the core "emotional trading analysis" metric.
+  Map<String, Map<String, dynamic>> summarizeByEmotion(
+      List<TradeModel> trades) {
+    final result = <String, Map<String, dynamic>>{};
+    final emotions = trades.map((t) => t.emotionBeforeTrade).toSet();
+    for (final emotion in emotions) {
+      final emoTrades =
+          trades.where((t) => t.emotionBeforeTrade == emotion).toList();
+      result[emotion] = summarize(emoTrades);
+    }
+    return result;
+  }
 }

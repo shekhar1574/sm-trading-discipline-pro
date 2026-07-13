@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/discipline_settings.dart';
 import '../providers/dashboard_provider.dart';
@@ -74,6 +75,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(onPressed: _save, child: const Text('Save Rules')),
+          ),
+          const SizedBox(height: 24),
+          Center(
+            child: Text(
+              AppConstants.appVersion,
+              style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+            ),
           ),
         ],
       ),

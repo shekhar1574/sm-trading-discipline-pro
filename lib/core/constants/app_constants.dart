@@ -6,6 +6,10 @@ class AppConstants {
 
   static const String appName = 'SM Trading Discipline Pro';
   static const String appTagline = 'Discipline First. Profits Follow.';
+  // Bump this manually with each meaningful release so it's easy to
+  // confirm which build is actually installed on a device (Settings
+  // screen displays this at the bottom).
+  static const String appVersion = 'v2.0.0 (Phase 2: Analytics, Calendar, Strategies, Fyers)';
 
   // ---------------- Discipline Engine defaults ----------------
   static const int defaultMaxTradesPerDay = 2;
@@ -40,6 +44,14 @@ class AppConstants {
     'Revenge',
     'FOMO',
     'Frustration',
+  ];
+
+  // ---------------- Market segments (multi-segment tracking) ----------------
+  static const List<String> marketSegments = [
+    'Equity',
+    'F&O',
+    'Forex',
+    'Crypto',
   ];
 
   // ---------------- Trade checklist ----------------

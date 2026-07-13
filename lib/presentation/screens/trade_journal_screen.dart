@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../data/models/trade_model.dart';
+import '../../data/services/report_export_service.dart';
 import '../providers/journal_provider.dart';
 
 class TradeJournalScreen extends StatefulWidget {
@@ -15,6 +16,9 @@ class TradeJournalScreen extends StatefulWidget {
 }
 
 class _TradeJournalScreenState extends State<TradeJournalScreen> {
+  final _exportService = ReportExportService();
+  bool _exporting = false;
+
   @override
   void initState() {
     super.initState();
@@ -23,12 +27,113 @@ class _TradeJournalScreenState extends State<TradeJournalScreen> {
     });
   }
 
+  Future<void> _showExportSheet(List<TradeModel> trades) async {
+    if (trades.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Log a trade first to export a report.')),
+      );
+      return;
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Export Report', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              ...ReportScope.values.map((scope) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(_scopeLabel(scope)),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.grid_on, color: AppColors.profit),
+                          tooltip: 'Export Excel',
+                          onPressed: () {
+                            Navigator.pop(sheetContext);
+                            _runExport(trades, scope, asExcel: true);
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.picture_as_pdf_outlined, color: AppColors.loss),
+                          tooltip: 'Export PDF',
+                          onPressed: () {
+                            Navigator.pop(sheetContext);
+                            _runExport(trades, scope, asExcel: false);
+                          },
+                        ),
+                      ],
+                    ),
+                  )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _scopeLabel(ReportScope scope) {
+    switch (scope) {
+      case ReportScope.all:
+        return 'All Trades';
+      case ReportScope.monthWise:
+        return 'Month Wise Trades';
+      case ReportScope.profitable:
+        return 'Profitable Trades';
+      case ReportScope.losing:
+        return 'Losing Trades';
+      case ReportScope.strategyOverview:
+        return 'Strategy Overview';
+    }
+  }
+
+  Future<void> _runExport(List<TradeModel> trades, ReportScope scope, {required bool asExcel}) async {
+    setState(() => _exporting = true);
+    try {
+      final file = asExcel
+          ? await _exportService.exportToExcel(trades, scope)
+          : await _exportService.exportToPdf(trades, scope);
+      await _exportService.shareFile(file, _scopeLabel(scope));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final journal = context.watch<JournalProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Trading Journal')),
+      appBar: AppBar(
+        title: const Text('Trading Journal'),
+        actions: [
+          IconButton(
+            icon: _exporting
+                ? const SizedBox(
+                    width: 18, height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.ios_share),
+            tooltip: 'Export Report',
+            onPressed: _exporting ? null : () => _showExportSheet(journal.trades),
+          ),
+        ],
+      ),
       body: journal.loading
           ? const Center(child: CircularProgressIndicator())
           : journal.trades.isEmpty

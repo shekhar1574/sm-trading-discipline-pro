@@ -16,6 +16,15 @@ class TradeModel {
   final bool checklistCompleted;
   final DateTime createdAt;
 
+  /// Market segment this trade belongs to: Equity, F&O, Forex, or Crypto.
+  /// Defaults to 'Equity' for backward compatibility with trades logged
+  /// before multi-segment tracking was added.
+  final String segment;
+
+  /// True if this trade's fill/exit came from a live broker sync
+  /// (Fyers, Zerodha, etc.) rather than manual journal entry.
+  final bool fromBroker;
+
   TradeModel({
     this.id,
     required this.symbol,
@@ -30,6 +39,8 @@ class TradeModel {
     this.mistakesMade,
     this.lessonsLearned,
     this.checklistCompleted = false,
+    this.segment = 'Equity',
+    this.fromBroker = false,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -66,6 +77,8 @@ class TradeModel {
       'mistakesMade': mistakesMade,
       'lessonsLearned': lessonsLearned,
       'checklistCompleted': checklistCompleted ? 1 : 0,
+      'segment': segment,
+      'fromBroker': fromBroker ? 1 : 0,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -85,6 +98,8 @@ class TradeModel {
       mistakesMade: map['mistakesMade'] as String?,
       lessonsLearned: map['lessonsLearned'] as String?,
       checklistCompleted: (map['checklistCompleted'] as int) == 1,
+      segment: (map['segment'] as String?) ?? 'Equity',
+      fromBroker: ((map['fromBroker'] as int?) ?? 0) == 1,
       createdAt: DateTime.parse(map['createdAt'] as String),
     );
   }
@@ -108,6 +123,8 @@ class TradeModel {
       mistakesMade: mistakesMade ?? this.mistakesMade,
       lessonsLearned: lessonsLearned ?? this.lessonsLearned,
       checklistCompleted: checklistCompleted,
+      segment: segment,
+      fromBroker: fromBroker,
       createdAt: createdAt,
     );
   }

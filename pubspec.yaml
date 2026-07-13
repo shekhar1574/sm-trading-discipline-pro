@@ -1,7 +1,7 @@
 name: sm_trading_discipline_pro
 description: "SM Trading Discipline Pro - Discipline First. Profits Follow."
 publish_to: 'none'
-version: 1.0.0+1
+version: 2.0.0+2
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -36,6 +36,18 @@ dependencies:
 
   # Premium fonts for the dashboard look
   google_fonts: ^6.2.1
+
+  # Opens broker OAuth login pages in the device browser
+  url_launcher: ^6.3.1
+
+  # Networking - calls our FastAPI backend for broker OAuth/live P&L
+  http: ^1.2.2
+
+  # Reports export (Excel + PDF)
+  excel: ^4.0.6
+  pdf: ^3.11.1
+  printing: ^5.13.1
+  share_plus: ^10.1.2
 
 dev_dependencies:
   flutter_test:

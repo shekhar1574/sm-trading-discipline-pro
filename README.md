@@ -28,11 +28,72 @@ Engine, Emotion Control Module, Trade Checklist, Trade Journal, and Dashboard.
 - **Settings** — configurable discipline rules (balance, trade limit, loss
   limit, profit target, cooldown minutes), persisted locally.
 
-Not yet built (by design — these are Phase 2+ per the brief): broker API
-integrations (Zerodha/Angel One/Upstox/Fyers/Dhan), cloud PostgreSQL sync,
-FastAPI backend, full 30-Day Challenge UI/badges, and the analytics charts
-screen (the data layer — `DisciplineEngine.summarize()` — is already in
-place for it).
+Not yet built (by design — these are Phase 2+ per the brief): Zerodha/
+Angel One/Upstox/Dhan broker integrations (Fyers is done — see below),
+cloud PostgreSQL sync, and full 30-Day Challenge badge UI (the level
+lookup logic already exists in `DisciplineEngine.traderLevelForPoints()`).
+
+## Phase 2 additions
+
+- **P&L Calendar** (`pnl_calendar_screen.dart`) — day-by-day realized P&L
+  grid, month navigation, color intensity scaled to that day's size.
+- **AI Analytics** (`analytics_screen.dart` + `analytics_service.dart`) —
+  three tabs:
+  - *Overview*: weekday P&L bar chart, win rate / net P&L summary, most
+    traded symbols.
+  - *Your Mistakes*: rule-based categorization (Revenge Trading, FOMO,
+    Emotional Trading, Poor Risk-Reward, Checklist Skipped) with a
+    severity badge and a suggested fix per category — computed from
+    fields already in your journal (emotion tag, R:R ratio, checklist
+    completion), not a black box.
+  - *AI Tips*: short coaching feed grouped by Psychology / Strategy /
+    Time-Session, e.g. "your best trading hour is 10:00 AM."
+  - Honesty note: none of this calls a real LLM — it's deterministic
+    pattern-matching over your own data, which keeps it explainable and
+    free to run on-device. Swapping in real LLM-generated tips later
+    means adding a `/coach/tips` endpoint to the FastAPI backend (already
+    started for Fyers) — ask if you want that wired in.
+- **Strategies Tracker** (`strategies_screen.dart` + `strategy_provider.dart`)
+  — create/edit strategies, see per-strategy trade count, win rate, and
+  net P&L computed automatically by matching `TradeModel.strategy`.
+- **Report Export** (`report_export_service.dart`) — Excel (.xlsx) and
+  PDF export for All Trades / Month Wise / Profitable / Losing /
+  Strategy Overview, shared via the platform share sheet. Triggered from
+  the export icon in the Trading Journal's app bar.
+- **Multi-segment tracking** — `TradeModel.segment` (Equity/F&O/Forex/
+  Crypto), with `DisciplineEngine.summarizeBySegment()` already built for
+  per-segment breakdowns.
+
+## Fyers live broker integration
+
+Architecture is broker-agnostic by design: `BrokerService` (an abstract
+interface in `lib/data/services/broker/broker_service.dart`) is what the
+UI talks to. `FyersBrokerService` is the first implementation; adding
+Zerodha/Angel One/Upstox/Dhan later means writing one new class, not
+touching any screen.
+
+**Important — this needs your action to actually go live:**
+1. A FastAPI backend (`/backend`) handles the Fyers OAuth handshake and
+   API calls — this **cannot** run inside the mobile app because Fyers
+   needs a public HTTPS redirect URL and your API secret must never sit
+   inside a phone app. Full deployment steps (Render, free tier works):
+   **see `backend/README.md`**.
+2. You need a Fyers trading account and to register an API app at
+   https://myapi.fyers.in/dashboard to get an App ID + Secret Key.
+3. Once deployed, set your backend's URL in
+   `lib/core/constants/backend_config.dart`.
+
+Until steps 1–3 are done, the **Connect Broker** screen shows a
+"backend not configured" notice instead of crashing — the rest of the
+app works fully offline without it.
+
+I wrote `backend/app/services/fyers_service.py` from Fyers' general API
+v3 patterns and syntax/route-tested it (see the FastAPI test output —
+all endpoints respond correctly), but I have **not** been able to test
+it against a real, live Fyers account (no sandbox access from here).
+Verify the exact response field names against
+https://myapi.fyers.in/docsv3 the first time you connect a real account,
+in case Fyers' API has since changed.
 
 ## Folder structure
 

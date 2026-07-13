@@ -5,6 +5,8 @@ import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'presentation/providers/dashboard_provider.dart';
 import 'presentation/providers/journal_provider.dart';
+import 'presentation/providers/strategy_provider.dart';
+import 'presentation/providers/broker_provider.dart';
 import 'presentation/screens/dashboard_screen.dart';
 
 void main() {
@@ -21,6 +23,8 @@ class SMTradingDisciplineApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => JournalProvider()),
+        ChangeNotifierProvider(create: (_) => StrategyProvider()),
+        ChangeNotifierProvider(create: (_) => BrokerProvider()),
       ],
       child: MaterialApp(
         title: AppConstants.appName,

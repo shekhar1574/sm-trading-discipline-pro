@@ -29,7 +29,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 1,
+      version: 3,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE trades (
@@ -46,6 +46,30 @@ class DatabaseService {
             mistakesMade TEXT,
             lessonsLearned TEXT,
             checklistCompleted INTEGER NOT NULL DEFAULT 0,
+            segment TEXT NOT NULL DEFAULT 'Equity',
+            fromBroker INTEGER NOT NULL DEFAULT 0,
+            createdAt TEXT NOT NULL
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE broker_connections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            brokerName TEXT NOT NULL,
+            accessToken TEXT,
+            connectedAt TEXT,
+            isActive INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE strategies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            targetRiskReward REAL NOT NULL DEFAULT 2.0,
+            segment TEXT NOT NULL DEFAULT 'Equity',
+            isActive INTEGER NOT NULL DEFAULT 1,
             createdAt TEXT NOT NULL
           )
         ''');
@@ -79,6 +103,37 @@ class DatabaseService {
             createdAt TEXT NOT NULL
           )
         ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        // v1 -> v2: multi-segment tracking + broker sync support.
+        if (oldVersion < 2) {
+          await db.execute(
+              "ALTER TABLE trades ADD COLUMN segment TEXT NOT NULL DEFAULT 'Equity'");
+          await db.execute(
+              'ALTER TABLE trades ADD COLUMN fromBroker INTEGER NOT NULL DEFAULT 0');
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS broker_connections (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              brokerName TEXT NOT NULL,
+              accessToken TEXT,
+              connectedAt TEXT,
+              isActive INTEGER NOT NULL DEFAULT 0
+            )
+          ''');
+        }
+        if (oldVersion < 3) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS strategies (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL,
+              description TEXT NOT NULL DEFAULT '',
+              targetRiskReward REAL NOT NULL DEFAULT 2.0,
+              segment TEXT NOT NULL DEFAULT 'Equity',
+              isActive INTEGER NOT NULL DEFAULT 1,
+              createdAt TEXT NOT NULL
+            )
+          ''');
+        }
       },
     );
   }
@@ -165,5 +220,52 @@ class DatabaseService {
   Future<List<Map<String, dynamic>>> getScoreLog() async {
     final db = await database;
     return db.query('discipline_score_log', orderBy: 'createdAt DESC');
+  }
+
+  // ---------------- Broker connections ----------------
+  // NOTE: access tokens are stored here in Phase 1 scaffolding for
+  // simplicity. Before shipping, move token storage to
+  // flutter_secure_storage (already a pubspec dependency) so tokens
+  // aren't sitting in plain SQLite alongside journal data.
+
+  Future<void> saveBrokerConnection(
+      String brokerName, String accessToken) async {
+    final db = await database;
+    await db.update('broker_connections', {'isActive': 0});
+    await db.insert('broker_connections', {
+      'brokerName': brokerName,
+      'accessToken': accessToken,
+      'connectedAt': DateTime.now().toIso8601String(),
+      'isActive': 1,
+    });
+  }
+
+  Future<Map<String, dynamic>?> getActiveBrokerConnection() async {
+    final db = await database;
+    final rows = await db.query('broker_connections',
+        where: 'isActive = 1', orderBy: 'connectedAt DESC', limit: 1);
+    return rows.isEmpty ? null : rows.first;
+  }
+
+  Future<void> disconnectBroker() async {
+    final db = await database;
+    await db.update('broker_connections', {'isActive': 0});
+  }
+
+  // ---------------- Strategies ----------------
+
+  Future<int> insertStrategy(Map<String, dynamic> strategyMap) async {
+    final db = await database;
+    return db.insert('strategies', strategyMap..remove('id'));
+  }
+
+  Future<List<Map<String, dynamic>>> getAllStrategies() async {
+    final db = await database;
+    return db.query('strategies', orderBy: 'createdAt DESC');
+  }
+
+  Future<void> deleteStrategy(int id) async {
+    final db = await database;
+    await db.delete('strategies', where: 'id = ?', whereArgs: [id]);
   }
 }
